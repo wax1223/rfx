@@ -1,204 +1,168 @@
+#pragma once
+
 #include <string>
 #include <map>
 #include <iostream>
 #include <vector>
-#include <cstdarg>
+#include <cstddef>
 
 // select serialable data and unserialbe
 
-struct Basic
+struct Member
 {
-    struct Member
-    {
-        const char* name;
-        size_t offset;
-        Basic* type;
-    };
-    std::string name;
+    const char* name;
+    size_t offset;
     uint32_t flags;
-    uint32_t size;
-    Basic(std::string _name, uint32_t _size) : name(_name), size(_size){}
-    virtual bool isBasicType()
-    {
-        return true; 
-    }
-    virtual std::vector<Member>* getProps()
-    {
-        return nullptr;
-    }
+    struct TypeInfo* typeinfo;
+    //const char* introduction?
+    //const int version?
+    Member(const char* _name, int _offset, TypeInfo* _typeinfo):name(_name), offset(_offset), typeinfo(_typeinfo){}
 };
 
-struct User : Basic
+template <typename T> struct TypeInfo* getType();
+
+struct TypeInfo
+{
+    const char* name;
+    uint32_t size;
+    TypeInfo(const char* _name, uint32_t _size) : name(_name), size(_size){}
+    virtual bool isBasicType() { return true; }
+    virtual std::vector<Member>* getProps() { return nullptr; }
+};
+
+struct TypeInt    : TypeInfo { TypeInt()    : TypeInfo{ "int",         sizeof(int)     } { } };
+struct TypeDouble : TypeInfo { TypeDouble() : TypeInfo{ "double",      sizeof(double)  } { } };
+struct TypeFloat  : TypeInfo { TypeFloat()  : TypeInfo{ "float",       sizeof(float)   } { } };
+struct TypeChar   : TypeInfo { TypeChar()   : TypeInfo{ "char",        sizeof(char)    } { } };
+struct TypeUInt32 : TypeInfo { TypeUInt32() : TypeInfo{ "uint32_t",    sizeof(uint32_t)} { } };
+
+template <> TypeInfo* getType<int>()      { static TypeInt typeDesc;    return &typeDesc; }
+template <> TypeInfo* getType<double>()   { static TypeDouble typeDesc; return &typeDesc; }
+template <> TypeInfo* getType<float>()    { static TypeFloat typeDesc;  return &typeDesc; }
+template <> TypeInfo* getType<char>()     { static TypeChar typeDesc;   return &typeDesc; }
+template <> TypeInfo* getType<uint32_t>() { static TypeUInt32 typeDesc; return &typeDesc; }
+
+struct UserTypeInfo : TypeInfo
 {
     std::vector<Member> members;
-    User(void(*init)(User*)) :Basic("User", 0)
+    UserTypeInfo(void(*init)(UserTypeInfo*)) : TypeInfo(nullptr, 0)
     {
         init(this);
     }
-    virtual bool isBasicType() override
-    {
-        return false; 
-    }
-    virtual std::vector<Member>* getProps() override
-    {
-        return &members;
-    }
+    virtual bool isBasicType() override { return false; }
+    virtual std::vector<Member>* getProps() override { return &members; }
 };
 
 
-// Declare the function template that handles primitive types such as int, std::std::string, etc.:
-template <typename T>
-Basic* getPrimitiveDescriptor();
-
-
-
-// A helper class to find Basics in different ways:
-struct DefaultResolver {
+// A helper class to find Types in different ways:
+struct DefaultResolver
+{
     template <typename T> static char func(decltype(&T::Reflection));
     template <typename T> static int func(...);
     template <typename T>
-    struct IsReflected {
-        enum { value = (sizeof(func<T>(nullptr)) == sizeof(char)) };
-    };
+    struct IsReflected { enum { value = (sizeof(func<T>(nullptr)) == sizeof(char)) }; };
 
     // This version is called if T has a static member named "Reflection":
     template <typename T, typename std::enable_if<IsReflected<T>::value, int>::type = 0>
-    static Basic* get() {
-        return &T::Reflection;
-    }
+    static TypeInfo* get() { return &T::Reflection; }
 
     // This version is called otherwise:
     template <typename T, typename std::enable_if<!IsReflected<T>::value, int>::type = 0>
-    static Basic* get() {
-        return getPrimitiveDescriptor<T>();
-    }
+    static TypeInfo* get() { return getType<T>(); }
 };
 
-
-// This is the primary class template for finding all Basics:
+// This is the primary class template for finding all Types:
 template <typename T>
-struct TypeResolver {
-    static Basic* get() {
-        return DefaultResolver::get<T>();
-    }
-};
-
-struct Basic_Int : Basic {
-    Basic_Int() : Basic{"int", sizeof(int)}{}
-};
-
-template <>
-Basic* getPrimitiveDescriptor<int>() 
+struct TypeResolver 
 {
-    static Basic_Int typeDesc;
-    return &typeDesc;
-}
-
-struct Basic_double : Basic {
-    Basic_double() : Basic{"double", sizeof(double)} {}
+    static TypeInfo* get() { return DefaultResolver::get<T>(); }
 };
-
-template <>
-Basic* getPrimitiveDescriptor<double>() 
-{
-    static Basic_double typeDesc;
-    return &typeDesc;
-}
-
-
-struct Basic_float : Basic {
-    Basic_float() : Basic{"float", sizeof(float)} { }
-};
-
-template <>
-Basic* getPrimitiveDescriptor<float>() 
-{
-    static Basic_float typeDesc;
-    return &typeDesc;
-}
-
-struct Basic_char : Basic {
-    Basic_char() : Basic{"char", sizeof(char)}{}
-};
-
-template <>
-Basic* getPrimitiveDescriptor<char>() 
-{
-    static Basic_char typeDesc;
-    return &typeDesc;
-}
-
-
-
-struct Basic_unsigned_int : Basic {
-    Basic_unsigned_int() : Basic{"unsigned int", sizeof(unsigned int)} {}
-};
-
-template <>
-Basic* getPrimitiveDescriptor<unsigned int>() 
-{
-    static Basic_unsigned_int typeDesc;
-    return &typeDesc;
-}
-
 
 template<typename T>
-Basic* MyType(T& a)
+TypeInfo* GetTypeInfo(T& a) { return &T::Reflection; }
+
+struct Type
 {
-    return &T::Reflection;
-}
-
-
-
-struct TypePtr
-{
-    Basic* info;
+    TypeInfo* info;
     void* data;
     template<typename T>
-    T* GetPtr()
-    {
-        return (T*)data;
-    }
+    T* GetPtr() { return (T*)data; }
 };
 
 struct RFX
 {
-    static void Register(std::string _name, Basic* ptr)
+    static void Register(std::string _name, TypeInfo* ptr)
     {
         typestable[_name] = ptr;
     }
-    static std::map<std::string, Basic*> typestable;
-    static TypePtr CreateObject(std::string _name)
+    static std::map<std::string, TypeInfo*> typestable;
+    static Type CreateObject(std::string _name)
     {
-        TypePtr tp;
-        tp.info = typestable[_name];
-        tp.data = malloc(tp.info->size);
-        return tp;
+        Type t;
+        t.info = typestable[_name];
+        t.data = malloc(t.info->size);
+        return t;
     }
 };
-std::map<std::string, Basic*> RFX::typestable;
+std::map<std::string, TypeInfo*> RFX::typestable;
 
+#ifdef RFX
+    #define STR_HELPER(x) #x
+    #define STR(x) STR_HELPER(x)
+    static_assert(0, "RFX already defined!!!! at " __FILE__ " " STR(__LINE__)) ;
+    #undef STR_HELPER
+    #undef STR
+#endif
 
-
-
-#define REFLECT() \
+#define RFX() \
     friend struct DefaultResolver; \
-    static User Reflection; \
-    static void initReflection(User*);
+    static UserTypeInfo Reflection; \
+    static void initReflection(UserTypeInfo*);
 
-#define REFLECT_STRUCT_BEGIN(type) \
-    User type::Reflection{type::initReflection}; \
-    void type::initReflection(User* typeDesc) { \
-        RFX::Register(#type, typeDesc);\
-        using T = type; \
-        typeDesc->name = #type; \
+#define RFX_IMPL(T) \
+    UserTypeInfo T::Reflection{T::initReflection}; \
+    void T::initReflection(UserTypeInfo* typeDesc) { \
+        RFX::Register(#T, typeDesc);\
+        using Tn = T; \
+        typeDesc->name = #T; \
         typeDesc->size = sizeof(T); \
-        typeDesc->members = {
+        typeDesc->members = { 
 
-#define REFLECT_STRUCT_MEMBER(name) \
-            {#name, offsetof(T, name), TypeResolver<decltype(T::name)>::get()},
+#define RFX_M(name) \
+            {#name, offsetof(Tn, name), TypeResolver<decltype(name)>::get()},
 
-#define REFLECT_STRUCT_END() \
-        }; \
-    }
+#define RFX_END()\
+    };}
 
+//Fail to impl a macro like IMPL(CLASS, m1, m2, m3, ...)
+// void Rgi(int begin, ...)
+// {
+//     va_list args;
+//     va_start(args, begin);
+//     int i = 0;
+//     i = va_arg(args, int);
+//     while (i >= 0)
+//     {
+//         cout << i << " ";
+//         i = va_arg(args, int);
+//     }
+// }
+
+// {#name, offsetof(Tn, name), TypeResolver<decltype(Tn::name)>::get()},
+// template<typename T, typename... Targs>
+// void Rgi(vector<Member>& vm, const char* name, int offset, TypeInfo* ti)
+// {
+//     vm.push_back
+//     (
+//         {name, offsetof(T, name), TypeResolver<decltype(name)>::get()}
+//     );
+// }
+
+// #define RFX_IMPL(T, M, ...) \
+//     UserTypeInfo T::Reflection{T::initReflection}; \
+//     void T::initReflection(UserTypeInfo* typeDesc) { \
+//         RFX::Register(#T, typeDesc);\
+//         using Tn = T; \
+//         typeDesc->name = #T; \
+//         typeDesc->size = sizeof(T); \
+//         typeDesc->members = Rgi(0, __VA_ARGS__, {});

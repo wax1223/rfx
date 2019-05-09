@@ -20,7 +20,7 @@ struct BClass
         b++;
         std::cout << "BclassFunc" << std::endl;
     }
-    REFLECT()
+    RFX()
 };
 
 
@@ -40,63 +40,58 @@ struct AClass
     {
         std::cout << "AClassFunc" << std::endl;
     }
-    REFLECT()
+    RFX()
 };
-REFLECT_STRUCT_BEGIN(AClass)
-REFLECT_STRUCT_MEMBER(AClasse)
-REFLECT_STRUCT_MEMBER(eAClass2)
-REFLECT_STRUCT_MEMBER(eAClass3)
-REFLECT_STRUCT_MEMBER(eAClass4)
-REFLECT_STRUCT_MEMBER(AClassa)
-REFLECT_STRUCT_MEMBER(AClassb)
-REFLECT_STRUCT_MEMBER(AClassc)
-REFLECT_STRUCT_MEMBER(AClassd)
-REFLECT_STRUCT_MEMBER(bAClassc)
-REFLECT_STRUCT_END()
+RFX_IMPL(AClass)
+    RFX_M(AClasse) RFX_M(eAClass2) RFX_M(eAClass3) RFX_M(eAClass4) 
+    RFX_M(AClassa) RFX_M(AClassb) RFX_M(AClassc) RFX_M(AClassd) 
+    RFX_M(bAClassc)
+RFX_END()
 
 
-REFLECT_STRUCT_BEGIN(BClass)
-REFLECT_STRUCT_MEMBER(BClassa)
-REFLECT_STRUCT_MEMBER(BClassb)
-REFLECT_STRUCT_MEMBER(BClassc)
-REFLECT_STRUCT_MEMBER(BClassd)
-REFLECT_STRUCT_END()
+RFX_IMPL(BClass)
+    RFX_M(BClassa) RFX_M(BClassb)
+    RFX_M(BClassc) RFX_M(BClassd)
+RFX_END()
 
 int main()
 {
+    // Rgi(123);
     BClass b;
-    Basic * bb = DefaultResolver::get<AClass>();
+    TypeInfo * bb = TypeResolver<AClass>::get();
     auto props = bb->getProps();
     cout << "Struct " << bb->name << " with size: " << bb->size << endl;
     for(int i = 0; i < props->size(); i++)
     {
         cout << "name: " << (*props)[i].name
              << " offset: " << (*props)[i].offset
-             << " type: " << (*props)[i].type->name
-             << " size: " << (*props)[i].type->size << endl;
+             << " type: " << (*props)[i].typeinfo->name
+             << " size: " << (*props)[i].typeinfo->size << endl;
     }
 
-    Basic * ab = MyType(b);
+    TypeInfo * ab = GetTypeInfo(b);
+    // int ai;
+    // TypeInfo* aiiti = GetTypeInfo(ai);
     auto propsb = ab->getProps();
     cout << "\nStruct " << ab->name << " with size: " << ab->size << endl;
     for(int i = 0; i < propsb->size(); i++)
     {
         cout << "name: " << (*propsb)[i].name
              << " offset: " << (*propsb)[i].offset
-             << " type: " << (*propsb)[i].type->name
-             << " size: " << (*propsb)[i].type->size << endl;
+             << " type: " << (*propsb)[i].typeinfo->name
+             << " size: " << (*propsb)[i].typeinfo->size << endl;
     }
 
 
-    TypePtr tp = RFX::CreateObject("AClass");
+    Type tp = RFX::CreateObject("AClass");
     cout << "\nStruct " << tp.info->name << " with size: " << tp.info->size << endl;
     auto propsba =  tp.info->getProps();
     for(int i = 0; i < propsba->size(); i++)
     {
         cout << "name: " << (*propsba)[i].name
              << " offset: " << (*propsba)[i].offset
-             << " type: " << (*propsba)[i].type->name
-             << " size: " << (*propsba)[i].type->size << endl;
+             << " type: " << (*propsba)[i].typeinfo->name
+             << " size: " << (*propsba)[i].typeinfo->size << endl;
     }
 }
 

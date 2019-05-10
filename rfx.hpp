@@ -1,4 +1,5 @@
 #pragma once
+//TODO(Wax) : impl a macro like IMPL(CLASS, m1, m2, m3, ...)
 
 #include <string>
 #include <map>
@@ -6,26 +7,35 @@
 #include <vector>
 #include <cstddef>
 
-struct Member
+namespace RFX
 {
-    const char* name;
-    size_t offset;
-    uint32_t flags;
-    struct TypeInfo* typeinfo;
-    //const char* introduction?
-    //const int version?
-    Member(const char* _name, int _offset, TypeInfo* _typeinfo):name(_name), offset(_offset), typeinfo(_typeinfo){}
-};
 
-template <typename T> struct TypeInfo* getType();
+template <typename T> struct TypeInfo* ThisType();
 
 struct TypeInfo
 {
     const char* name;
     uint32_t size;
+    const char* GetTypeName() { return name; }
+    const uint32_t GetTypeSize(){ return size; }
     TypeInfo(const char* _name, uint32_t _size) : name(_name), size(_size){}
     virtual bool isBasicType() { return true; }
-    virtual std::vector<Member>* getProps() { return nullptr; }
+    virtual std::vector<struct Property>* GetProperties() { return nullptr; }
+};
+
+struct Property
+{
+    const char* name;
+    uint32_t offset;
+    uint32_t flags;
+    TypeInfo* info;
+    //const char* introduction?
+    //const int version?
+    Property(const char* _name, int _offset, TypeInfo* _info):name(_name), offset(_offset), info(_info){}
+    const char* GetTypeName(){ return info->GetTypeName(); }
+    const uint32_t GetTypeSize(){ return info->GetTypeSize(); }
+    const char* GetName() { return name;}
+    const uint32_t GetOffset() {return offset;}
 };
 
 struct TypeInt    : TypeInfo { TypeInt()    : TypeInfo{ "int",         sizeof(int)     } { } };
@@ -34,21 +44,21 @@ struct TypeFloat  : TypeInfo { TypeFloat()  : TypeInfo{ "float",       sizeof(fl
 struct TypeChar   : TypeInfo { TypeChar()   : TypeInfo{ "char",        sizeof(char)    } { } };
 struct TypeUInt32 : TypeInfo { TypeUInt32() : TypeInfo{ "uint32_t",    sizeof(uint32_t)} { } };
 
-template <> TypeInfo* getType<int>()      { static TypeInt typeDesc;    return &typeDesc; }
-template <> TypeInfo* getType<double>()   { static TypeDouble typeDesc; return &typeDesc; }
-template <> TypeInfo* getType<float>()    { static TypeFloat typeDesc;  return &typeDesc; }
-template <> TypeInfo* getType<char>()     { static TypeChar typeDesc;   return &typeDesc; }
-template <> TypeInfo* getType<uint32_t>() { static TypeUInt32 typeDesc; return &typeDesc; }
+template <> TypeInfo* ThisType<int>()      { static TypeInt typeDesc;    return &typeDesc; }
+template <> TypeInfo* ThisType<double>()   { static TypeDouble typeDesc; return &typeDesc; }
+template <> TypeInfo* ThisType<float>()    { static TypeFloat typeDesc;  return &typeDesc; }
+template <> TypeInfo* ThisType<char>()     { static TypeChar typeDesc;   return &typeDesc; }
+template <> TypeInfo* ThisType<uint32_t>() { static TypeUInt32 typeDesc; return &typeDesc; }
 
 struct UserTypeInfo : TypeInfo
 {
-    std::vector<Member> members;
+    std::vector<Property> Props;
     UserTypeInfo(void(*init)(UserTypeInfo*)) : TypeInfo(nullptr, 0)
     {
         init(this);
     }
     virtual bool isBasicType() override { return false; }
-    virtual std::vector<Member>* getProps() override { return &members; }
+    virtual std::vector<Property>* GetProperties() override { return &Props; }
 };
 
 struct ThisTypeInfo
@@ -65,40 +75,42 @@ struct ThisTypeInfo
     static TypeInfo* get(T& t) { return &T::Reflection; }
 
     template <typename T, typename std::enable_if<!IsReflected<T>::value, int>::type = 0>
-    static TypeInfo* get() { return getType<T>(); }
+    static TypeInfo* get() { return ThisType<T>(); }
 
     template <typename T, typename std::enable_if<!IsReflected<T>::value, int>::type = 0>
-    static TypeInfo* get(T& t) { return getType<T>(); }
+    static TypeInfo* get(T& t) { return ThisType<T>(); }
 };
 
-struct Type
+struct Object
 {
     TypeInfo* info;
     void* data;
     template<typename T>
     T* GetPtr() { return (T*)data; }
+    const char* GetName() { return info->GetTypeName(); }
+    uint32_t GetSize() { return info->GetTypeSize(); }
 };
 
-struct RFX
+struct Meta
 {
     static std::map<std::string, TypeInfo*> typestable;
     static void Register(std::string _name, TypeInfo* ptr)
     {
         typestable[_name] = ptr;
     }
-    static Type CreateObject(std::string _name)
+    static Object CreateObject(std::string _name)
     {
-        Type t;
-        t.info = typestable[_name];
-        t.data = malloc(t.info->size);
-        return t;
+        Object o;
+        o.info = typestable[_name];
+        o.data = malloc(o.info->size);
+        return o;
     }
     template <typename T>
     static TypeInfo* GetInfo() { return ThisTypeInfo::get<T>(); }
     template <typename T>
     static TypeInfo* GetInfo(T& a) { return ThisTypeInfo::get<T>(a); }
 };
-std::map<std::string, TypeInfo*> RFX::typestable;
+std::map<std::string, TypeInfo*> Meta::typestable;
 
 #ifdef RFX
     #define STR_HELPER(x) #x
@@ -116,47 +128,16 @@ std::map<std::string, TypeInfo*> RFX::typestable;
 #define RFX_IMPL(T) \
     UserTypeInfo T::Reflection{T::initReflection}; \
     void T::initReflection(UserTypeInfo* typeDesc) { \
-        RFX::Register(#T, typeDesc);\
+        Meta::Register(#T, typeDesc);\
         using Tn = T; \
         typeDesc->name = #T; \
         typeDesc->size = sizeof(T); \
-        typeDesc->members = { 
+        typeDesc->Props = { 
 
 #define RFX_M(name) \
-            {#name, offsetof(Tn, name), RFX::GetInfo<decltype(name)>()},
+            {#name, offsetof(Tn, name), Meta::GetInfo<decltype(name)>()},
 
 #define RFX_END()\
     };}
-
-//Fail to impl a macro like IMPL(CLASS, m1, m2, m3, ...)
-// void Rgi(int begin, ...)
-// {
-//     va_list args;
-//     va_start(args, begin);
-//     int i = 0;
-//     i = va_arg(args, int);
-//     while (i >= 0)
-//     {
-//         cout << i << " ";
-//         i = va_arg(args, int);
-//     }
-// }
-
-// {#name, offsetof(Tn, name), TypeResolver<decltype(Tn::name)>::get()},
-// template<typename T, typename... Targs>
-// void Rgi(vector<Member>& vm, const char* name, int offset, TypeInfo* ti)
-// {
-//     vm.push_back
-//     (
-//         {name, offsetof(T, name), TypeResolver<decltype(name)>::get()}
-//     );
-// }
-
-// #define RFX_IMPL(T, M, ...) \
-//     UserTypeInfo T::Reflection{T::initReflection}; \
-//     void T::initReflection(UserTypeInfo* typeDesc) { \
-//         RFX::Register(#T, typeDesc);\
-//         using Tn = T; \
-//         typeDesc->name = #T; \
-//         typeDesc->size = sizeof(T); \
-//         typeDesc->members = Rgi(0, __VA_ARGS__, {});
+    
+} // namespace RFX

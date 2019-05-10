@@ -6,6 +6,7 @@
 #include "rfx.hpp"
 
 using namespace std;
+using namespace RFX;
 
 struct BClass
 {
@@ -56,42 +57,41 @@ RFX_END()
 
 int main()
 {
-    // Rgi(123);
     BClass b;
-    TypeInfo * bb = RFX::GetInfo<AClass>();
-    auto props = bb->getProps();
+    TypeInfo * bb = Meta::GetInfo<AClass>();
+    auto props = bb->GetProperties();
     cout << "Struct " << bb->name << " with size: " << bb->size << endl;
     for(int i = 0; i < props->size(); i++)
     {
-        cout << "name: " << (*props)[i].name
-             << " offset: " << (*props)[i].offset
-             << " type: " << (*props)[i].typeinfo->name
-             << " size: " << (*props)[i].typeinfo->size << endl;
+        cout << "name: " << (*props)[i].GetName()
+             << " offset: " << (*props)[i].GetOffset()
+             << " type: " << (*props)[i].GetTypeName()
+             << " size: " << (*props)[i].GetTypeSize() << endl;
     }
 
-    TypeInfo * ab = RFX::GetInfo(b);
-    // int ai;
-    // TypeInfo* aiiti = GetTypeInfo(ai);
-    auto propsb = ab->getProps();
-    cout << "\nStruct " << ab->name << " with size: " << ab->size << endl;
+    TypeInfo * ab = Meta::GetInfo(b);
+    auto propsb = ab->GetProperties();
+    cout << "\nStruct " << ab->GetTypeName() << " with size: " << ab->GetTypeSize() << endl;
     for(int i = 0; i < propsb->size(); i++)
     {
-        cout << "name: " << (*propsb)[i].name
-             << " offset: " << (*propsb)[i].offset
-             << " type: " << (*propsb)[i].typeinfo->name
-             << " size: " << (*propsb)[i].typeinfo->size << endl;
+        cout << "name: " << (*propsb)[i].GetName()
+             << " offset: " << (*propsb)[i].GetOffset()
+             << " type: " << (*propsb)[i].GetTypeName()
+             << " size: " << (*propsb)[i].GetTypeSize() << endl;
     }
 
 
-    Type tp = RFX::CreateObject("AClass");
-    cout << "\nStruct " << tp.info->name << " with size: " << tp.info->size << endl;
-    auto propsba =  tp.info->getProps();
+    Object tp = Meta::CreateObject("AClass");
+
+    cout << "\nStruct " << tp.GetName() << " with size: " << tp.GetSize() << endl;
+    auto propsba =  tp.info->GetProperties();
     for(int i = 0; i < propsba->size(); i++)
     {
-        cout << "name: " << (*propsba)[i].name
-             << " offset: " << (*propsba)[i].offset
-             << " type: " << (*propsba)[i].typeinfo->name
-             << " size: " << (*propsba)[i].typeinfo->size << endl;
+        cout << "name: " << (*propsba)[i].GetName()
+             << " offset: " << (*propsba)[i].GetOffset()
+             << " type: " << (*propsba)[i].GetTypeName()
+             << " size: " << (*propsba)[i].GetTypeSize() 
+             << endl;
     }
 }
 

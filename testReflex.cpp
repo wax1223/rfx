@@ -58,7 +58,7 @@ int main()
 {
     // Rgi(123);
     BClass b;
-    TypeInfo * bb = TypeResolver<AClass>::get();
+    TypeInfo * bb = RFX::GetInfo<AClass>();
     auto props = bb->getProps();
     cout << "Struct " << bb->name << " with size: " << bb->size << endl;
     for(int i = 0; i < props->size(); i++)
@@ -69,7 +69,7 @@ int main()
              << " size: " << (*props)[i].typeinfo->size << endl;
     }
 
-    TypeInfo * ab = GetTypeInfo(b);
+    TypeInfo * ab = RFX::GetInfo(b);
     // int ai;
     // TypeInfo* aiiti = GetTypeInfo(ai);
     auto propsb = ab->getProps();

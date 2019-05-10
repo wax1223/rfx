@@ -6,8 +6,6 @@
 #include <vector>
 #include <cstddef>
 
-// select serialable data and unserialbe
-
 struct Member
 {
     const char* name;
@@ -53,33 +51,25 @@ struct UserTypeInfo : TypeInfo
     virtual std::vector<Member>* getProps() override { return &members; }
 };
 
-
-// A helper class to find Types in different ways:
-struct DefaultResolver
+struct ThisTypeInfo
 {
     template <typename T> static char func(decltype(&T::Reflection));
     template <typename T> static int func(...);
     template <typename T>
     struct IsReflected { enum { value = (sizeof(func<T>(nullptr)) == sizeof(char)) }; };
 
-    // This version is called if T has a static member named "Reflection":
     template <typename T, typename std::enable_if<IsReflected<T>::value, int>::type = 0>
     static TypeInfo* get() { return &T::Reflection; }
 
-    // This version is called otherwise:
+    template <typename T, typename std::enable_if<IsReflected<T>::value, int>::type = 0>
+    static TypeInfo* get(T& t) { return &T::Reflection; }
+
     template <typename T, typename std::enable_if<!IsReflected<T>::value, int>::type = 0>
     static TypeInfo* get() { return getType<T>(); }
-};
 
-// This is the primary class template for finding all Types:
-template <typename T>
-struct TypeResolver 
-{
-    static TypeInfo* get() { return DefaultResolver::get<T>(); }
+    template <typename T, typename std::enable_if<!IsReflected<T>::value, int>::type = 0>
+    static TypeInfo* get(T& t) { return getType<T>(); }
 };
-
-template<typename T>
-TypeInfo* GetTypeInfo(T& a) { return &T::Reflection; }
 
 struct Type
 {
@@ -91,11 +81,11 @@ struct Type
 
 struct RFX
 {
+    static std::map<std::string, TypeInfo*> typestable;
     static void Register(std::string _name, TypeInfo* ptr)
     {
         typestable[_name] = ptr;
     }
-    static std::map<std::string, TypeInfo*> typestable;
     static Type CreateObject(std::string _name)
     {
         Type t;
@@ -103,6 +93,10 @@ struct RFX
         t.data = malloc(t.info->size);
         return t;
     }
+    template <typename T>
+    static TypeInfo* GetInfo() { return ThisTypeInfo::get<T>(); }
+    template <typename T>
+    static TypeInfo* GetInfo(T& a) { return ThisTypeInfo::get<T>(a); }
 };
 std::map<std::string, TypeInfo*> RFX::typestable;
 
@@ -115,7 +109,7 @@ std::map<std::string, TypeInfo*> RFX::typestable;
 #endif
 
 #define RFX() \
-    friend struct DefaultResolver; \
+    friend struct ThisTypeInfo; \
     static UserTypeInfo Reflection; \
     static void initReflection(UserTypeInfo*);
 
@@ -129,7 +123,7 @@ std::map<std::string, TypeInfo*> RFX::typestable;
         typeDesc->members = { 
 
 #define RFX_M(name) \
-            {#name, offsetof(Tn, name), TypeResolver<decltype(name)>::get()},
+            {#name, offsetof(Tn, name), RFX::GetInfo<decltype(name)>()},
 
 #define RFX_END()\
     };}

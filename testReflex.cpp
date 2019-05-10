@@ -10,10 +10,14 @@ using namespace RFX;
 
 struct BClass
 {
+    // int BClassa;
+    // float BClassb;
+    // double BClassc;
+    // unsigned BClassd;
     int BClassa;
-    float BClassb;
-    double BClassc;
-    unsigned BClassd;
+    int BClassb;
+    int BClassc;
+    int BClassd;
 
     void BclassFunc(int i)
     {
@@ -81,7 +85,7 @@ int main()
     }
 
 
-    Object tp = Meta::CreateObject("AClass");
+    Object tp = Meta::CreateObjectByName("AClass");
 
     cout << "\nStruct " << tp.GetName() << " with size: " << tp.GetSize() << endl;
     auto propsba =  tp.info->GetProperties();
@@ -92,6 +96,28 @@ int main()
              << " type: " << (*propsba)[i].GetTypeName()
              << " size: " << (*propsba)[i].GetTypeSize() 
              << endl;
+    }
+
+    BClass cbc;
+    cbc.BClassa = 1;
+    cbc.BClassb = 12;
+    cbc.BClassc = 123;
+    cbc.BClassd = 1234;
+
+    Object ttp = Meta::CreateObject(cbc);
+    int v = 12345;
+    ttp.SetVal("BClassd", &v);
+    cout << "\nStruct " << ttp.GetName() << " with size: " << ttp.GetSize() << endl;
+    auto propsbap = ttp.info->GetProperties();
+    for(int i = 0; i < propsbap->size(); i++)
+    {
+        cout << "name: " << (*propsbap)[i].GetName()
+             << " offset: " << (*propsbap)[i].GetOffset()
+             << " type: " << (*propsbap)[i].GetTypeName()
+             << " size: " << (*propsbap)[i].GetTypeSize()
+             << " val: " << *(int*)ttp.GetVal((*propsbap)[i].GetName()).GetVal()
+             << endl;
+             assert((*propsbap)[i].data == nullptr);
     }
 }
 

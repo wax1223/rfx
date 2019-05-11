@@ -47,9 +47,45 @@ struct Property
         return data + offset;
     }
     bool IsValid(){ return (data != nullptr && info != nullptr); }
-    int ToInt() { assert(IsValid()); return *((int*)data + offset);}
+    int ToInt() { assert(IsValid()); return *((int*)(data + offset));}
     float ToFloat() { assert(IsValid()); return *((float*)(data + offset));}
     float ToDouble() {assert(IsValid()); return *((double*)(data + offset));}
+    float ToUint32() {assert(IsValid()); return *((uint32_t*)(data + offset));}
+    char ToChar() {assert(IsValid()); return *((char*)(data + offset));}
+
+    size_t MemberSize(){ return (*info->GetProperties()).size(); }
+
+    bool isObject()
+    {
+        return !info->isBasicType();
+    }
+    bool isInt()
+    {
+        return (strcmp(info->GetTypeName(), "int") == 0);
+    }
+    bool isDouble()
+    {
+        return (strcmp(info->GetTypeName(), "double") == 0);
+    }
+    bool isfloat()
+    {
+        return (strcmp(info->GetTypeName(), "float") == 0);
+    }
+    bool isuint32()
+    {
+        return (strcmp(info->GetTypeName(), "uint32_t") == 0);
+    }
+    bool ischar()
+    {
+        return (strcmp(info->GetTypeName(), "char") == 0);
+    }
+
+    Property operator[](int i)
+    {
+        Property p = (*info->GetProperties())[i];
+        p.data = data;
+        return p;
+    }
 };
 
 struct TypeInt    : TypeInfo { TypeInt()    : TypeInfo{ "int",         sizeof(int)     } { } };
@@ -99,6 +135,7 @@ struct Object
 {
     TypeInfo* info;
     uint8_t* data;
+    size_t MemberSize(){ return (*info->GetProperties()).size(); }
     template<typename T>
     T* ToPtr() { return (T*)data; }
     const char* GetName() { return info->GetTypeName(); }
@@ -118,6 +155,7 @@ struct Object
         }
         return prop;
     }
+
     Property SetVal(const char* propname,  void * v)
     {
         Property prop(nullptr, 0, nullptr);
@@ -134,6 +172,12 @@ struct Object
             }
         }
         return prop;
+    }
+    Property operator[](int i)
+    {
+        Property p = (*info->GetProperties())[i];
+        p.data = data;
+        return p;
     }
 };
 

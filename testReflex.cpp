@@ -3,21 +3,22 @@
 #include <type_traits>
 #include <vector>
 
+// #include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/prettywriter.h"
+
 #include "rfx.hpp"
 
 using namespace std;
 using namespace RFX;
+using namespace rapidjson;
 
 struct BClass
 {
-    // int BClassa;
-    // float BClassb;
-    // double BClassc;
-    // unsigned BClassd;
     int BClassa;
-    int BClassb;
-    int BClassc;
-    int BClassd;
+    float BClassb;
+    double BClassc;
+    unsigned BClassd;
 
     void BclassFunc(int i)
     {
@@ -59,7 +60,7 @@ RFX_IMPL(BClass)
     RFX_M(BClassc) RFX_M(BClassd)
 RFX_END()
 
-int main()
+void TestGetTypeInfo()
 {
     BClass b;
     TypeInfo * bb = Meta::GetInfo<AClass>();
@@ -115,10 +116,157 @@ int main()
              << " offset: " << (*propsbap)[i].GetOffset()
              << " type: " << (*propsbap)[i].GetTypeName()
              << " size: " << (*propsbap)[i].GetTypeSize()
-             << " val: " << *(int*)ttp.GetVal((*propsbap)[i].GetName()).GetVal()
+            //  << " val: " << *(int*)ttp.GetVal((*propsbap)[i].GetName()).GetVal()
              << endl;
              assert((*propsbap)[i].data == nullptr);
     }
+}
+
+
+void testRapidJson()
+{
+    StringBuffer s;
+    PrettyWriter<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("Object");
+        writer.StartObject();
+        writer.Key("hello");
+        writer.String("world");
+        writer.Key("t");
+        writer.Bool(true);
+        writer.Key("f");
+        writer.Bool(false);
+        writer.Key("n");
+        writer.Null();
+        writer.Key("i");
+        writer.Uint(123);
+        writer.Key("pi");
+        writer.Double(3.1416);
+    writer.EndObject();
+    writer.Key("hello");
+    writer.String("world");
+    writer.Key("t");
+    writer.Bool(true);
+    writer.Key("f");
+    writer.Bool(false);
+    writer.Key("n");
+    writer.Null();
+    writer.Key("i");
+    writer.Uint(123);
+    writer.Key("pi");
+    writer.Double(3.1416);
+
+    writer.Key("a");
+    writer.StartArray();
+    for (unsigned i = 0; i < 4; i++)
+        writer.Uint(i);
+    writer.EndArray();
+
+    writer.EndObject();
+    cout << s.GetString() << endl;
+}
+void toJson(PrettyWriter<StringBuffer>& w, Property p)
+{
+    if(p.isObject())
+    {
+        w.Key(p.GetName());
+        w.StartObject();
+        for(int i = 0; i < p.MemberSize(); i++)
+        {
+            toJson(w, p[i]);
+        }
+        w.EndObject();
+    }
+    else
+    {
+        w.Key(p.GetName());
+        w.StartObject();
+        w.Key("Type");
+        w.String(p.GetTypeName());
+        w.Key("Value");
+        if(p.isInt())
+        {
+            int a = p.ToInt();
+            w.Int(a);
+        }
+        else if(p.isDouble())
+        {
+            w.Double(p.ToDouble());
+        }
+        else if(p.isfloat())
+        {
+            w.Double(p.ToFloat());
+        }
+        else if(p.isuint32())
+        {
+            w.Uint(p.ToUint32());
+        }
+        else
+        {
+            w.Int(p.ToChar());
+        }
+        w.EndObject();
+    }
+}
+
+void Serial()
+{
+    StringBuffer s;
+    PrettyWriter<StringBuffer> writer(s);
+    
+    BClass b;
+    b.BClassa = 520;
+    b.BClassb = 5.210f;
+    b.BClassc = 0.520808;
+    b.BClassd = 321123;
+    Object o = Meta::CreateObject(b);
+
+    writer.StartObject();
+
+    writer.Key(o.GetName());
+        writer.StartObject();
+        for(int i = 0; i < o.MemberSize(); i++)
+        {
+            toJson(writer, o[i]);
+        }
+        writer.EndObject();
+    writer.EndObject();
+    cout << s.GetString() << endl;
+
+    s.Clear();
+    writer.Reset(s);
+
+    cout << "\n\n";
+
+    AClass a;
+    a.AClassa = 1;
+    a.AClassb = 3.1415926f;
+    a.AClassc = 2.163182731823;
+    a.AClassd = 520584;
+    a.AClasse = 'h';
+    a.bAClassc = b;
+    a.eAClass2 = 'u';
+    a.eAClass3 = 'g';
+    a.eAClass4 = 'u';
+    a.eAClass5 = 'o';
+    
+    Object o2 = Meta::CreateObject(a);
+    writer.StartObject();
+    writer.Key(o2.GetName());
+        writer.StartObject();
+        for(int i = 0; i < o2.MemberSize(); i++)
+        {
+            toJson(writer, o2[i]);
+        }
+        writer.EndObject();
+    writer.EndObject();
+    cout << s.GetString() << endl;
+}
+
+int main()
+{
+    Serial();
+    // testRapidJson();
 }
 
 
@@ -183,3 +331,4 @@ void Load(js,)
 */
 
 
+// 

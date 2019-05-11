@@ -1,5 +1,5 @@
 .PHONY: testReflex
 
 testReflex:
-	clang++ testReflex.cpp -o testReflex -Wall -std=c++11 -g
+	clang++ testReflex.cpp -o testReflex -Wall -std=c++11 -g -I../rapidjson/include/
 	

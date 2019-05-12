@@ -21,19 +21,20 @@ struct TypeInfo
     const uint32_t GetTypeSize(){ return size; }
     TypeInfo(const char* _name, uint32_t _size) : name(_name), size(_size){}
     virtual bool isBasicType() { return true; }
-    virtual std::vector<struct Property>* GetProperties() { return nullptr; }
+    virtual std::vector<struct Object>* GetProperties() { return nullptr; }
 };
 
-struct Property
+struct Object
 {
-    const char* name = nullptr;
-    uint32_t offset;
-    uint32_t flags;
+    const char* name = "root";
+    uint32_t offset = 0;
+    uint32_t flags = 0;
     TypeInfo* info = nullptr;
     uint8_t* data = nullptr;
     //const char* introduction?
     //const int version?
-    Property(const char* _name, int _offset, TypeInfo* _info):name(_name), offset(_offset), info(_info){}
+    Object() { }
+    Object(const char* _name, int _offset, TypeInfo* _info):name(_name), offset(_offset), info(_info){}
     const char* GetTypeName(){ return info->GetTypeName(); }
     const uint32_t GetTypeSize(){ return info->GetTypeSize(); }
     const char* GetName() { return name;}
@@ -49,8 +50,8 @@ struct Property
     bool IsValid(){ return (data != nullptr && info != nullptr); }
     int ToInt() { assert(IsValid()); return *((int*)(data + offset));}
     float ToFloat() { assert(IsValid()); return *((float*)(data + offset));}
-    float ToDouble() {assert(IsValid()); return *((double*)(data + offset));}
-    float ToUint32() {assert(IsValid()); return *((uint32_t*)(data + offset));}
+    double ToDouble() {assert(IsValid()); return *((double*)(data + offset));}
+    uint32_t ToUint32() {assert(IsValid()); return *((uint32_t*)(data + offset));}
     char ToChar() {assert(IsValid()); return *((char*)(data + offset));}
 
     size_t MemberSize(){ return (*info->GetProperties()).size(); }
@@ -80,10 +81,10 @@ struct Property
         return (strcmp(info->GetTypeName(), "char") == 0);
     }
 
-    Property operator[](int i)
+    Object operator[](int i)
     {
-        Property p = (*info->GetProperties())[i];
-        p.data = data;
+        Object p = (*info->GetProperties())[i];
+        p.data = data + offset;
         return p;
     }
 };
@@ -102,13 +103,13 @@ template <> TypeInfo* ThisType<uint32_t>() { static TypeUInt32 typeDesc; return 
 
 struct UserTypeInfo : TypeInfo
 {
-    std::vector<Property> Props;
+    std::vector<Object> Props;
     UserTypeInfo(void(*init)(UserTypeInfo*)) : TypeInfo(nullptr, 0)
     {
         init(this);
     }
     virtual bool isBasicType() override { return false; }
-    virtual std::vector<Property>* GetProperties() override { return &Props; }
+    virtual std::vector<Object>* GetProperties() override { return &Props; }
 };
 
 struct ThisTypeInfo
@@ -131,18 +132,25 @@ struct ThisTypeInfo
     static TypeInfo* get(T& t) { return ThisType<T>(); }
 };
 
+/*
 struct Object
 {
-    TypeInfo* info;
-    uint8_t* data;
+    TypeInfo* info = nullptr;
+    uint8_t* data = nullptr;
+    // uint32_t offset;
+    // uint32_t flags;
+
+    //const char* introduction?
+    //const int version?
+
     size_t MemberSize(){ return (*info->GetProperties()).size(); }
     template<typename T>
     T* ToPtr() { return (T*)data; }
     const char* GetName() { return info->GetTypeName(); }
     uint32_t GetSize() { return info->GetTypeSize(); }
-    Property GetVal(const char* propname)
+    Object GetVal(const char* propname)
     {
-        Property prop(nullptr, 0, nullptr);
+        Object prop(nullptr, 0, nullptr);
         auto& ps = *info->GetProperties();
         for(auto& p : ps)
         {
@@ -156,9 +164,9 @@ struct Object
         return prop;
     }
 
-    Property SetVal(const char* propname,  void * v)
+    Object SetVal(const char* propname,  void * v)
     {
-        Property prop(nullptr, 0, nullptr);
+        Object prop(nullptr, 0, nullptr);
 
         auto& ps = *info->GetProperties();
         for(auto& p : ps)
@@ -173,14 +181,14 @@ struct Object
         }
         return prop;
     }
-    Property operator[](int i)
+    Object operator[](int i)
     {
-        Property p = (*info->GetProperties())[i];
+        Object p = (*info->GetProperties())[i];
         p.data = data;
         return p;
     }
 };
-
+*/
 struct Meta
 {
     static std::map<std::string, TypeInfo*> typestable;

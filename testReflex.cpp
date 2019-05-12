@@ -110,10 +110,9 @@ void TestGetTypeInfo()
              << " size: " << (*propsb)[i].GetTypeSize() << endl;
     }
 
-/*
     Object tp = Meta::CreateObjectByName("AClass");
 
-    cout << "\nStruct " << tp.GetName() << " with size: " << tp.GetSize() << endl;
+    cout << "\nStruct " << tp.GetName() << " with size: " << tp.GetTypeSize() << endl;
     auto propsba =  tp.info->GetProperties();
     for(int i = 0; i < propsba->size(); i++)
     {
@@ -132,8 +131,8 @@ void TestGetTypeInfo()
 
     Object ttp = Meta::CreateObject(cbc);
     int v = 12345;
-    ttp.SetVal("ui", &v);
-    cout << "\nStruct " << ttp.GetName() << " with size: " << ttp.GetSize() << endl;
+    ttp.SetMemberVal("ui", &v);
+    cout << "\nStruct " << ttp.GetName() << " with size: " << ttp.GetTypeSize() << endl;
     auto propsbap = ttp.info->GetProperties();
     for(int i = 0; i < propsbap->size(); i++)
     {
@@ -141,11 +140,9 @@ void TestGetTypeInfo()
              << " offset: " << (*propsbap)[i].GetOffset()
              << " type: " << (*propsbap)[i].GetTypeName()
              << " size: " << (*propsbap)[i].GetTypeSize()
-            //  << " val: " << *(int*)ttp.GetVal((*propsbap)[i].GetName()).GetVal()
              << endl;
              assert((*propsbap)[i].data == nullptr);
     }
-    */
 }
 
 char* MakeNameAndType(char* buffer, const char* name, const char* type, const char sep = '|')

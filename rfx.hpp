@@ -47,6 +47,44 @@ struct Object
     {
         return data + offset;
     }
+
+    Object GetMemberVal(const char* name)
+    {
+        assert(info->GetProperties());
+
+        Object prop(nullptr, 0, nullptr);
+        auto& ps = *info->GetProperties();
+        for(auto& p : ps)
+        {
+            if(strcmp(p.GetName(), name) == 0)
+            {
+                prop = p;
+                prop.data = data;
+                return prop;
+            }
+        }
+        return prop;
+    }
+
+    Object SetMemberVal(const char* name, void* v)
+    {
+        assert(info->GetProperties());
+
+        Object prop(nullptr, 0, nullptr);
+        auto& ps = *info->GetProperties();
+        for(auto& p : ps)
+        {
+            if(strcmp(p.GetName(), name) == 0)
+            {
+                prop = p;
+                prop.data = data;
+                prop.SetVal(v);
+                return prop;
+            }
+        }
+        return prop;
+    }
+
     bool IsValid(){ return (data != nullptr && info != nullptr); }
     int ToInt() { assert(IsValid()); return *((int*)(data + offset));}
     float ToFloat() { assert(IsValid()); return *((float*)(data + offset));}
@@ -132,63 +170,6 @@ struct ThisTypeInfo
     static TypeInfo* get(T& t) { return ThisType<T>(); }
 };
 
-/*
-struct Object
-{
-    TypeInfo* info = nullptr;
-    uint8_t* data = nullptr;
-    // uint32_t offset;
-    // uint32_t flags;
-
-    //const char* introduction?
-    //const int version?
-
-    size_t MemberSize(){ return (*info->GetProperties()).size(); }
-    template<typename T>
-    T* ToPtr() { return (T*)data; }
-    const char* GetName() { return info->GetTypeName(); }
-    uint32_t GetSize() { return info->GetTypeSize(); }
-    Object GetVal(const char* propname)
-    {
-        Object prop(nullptr, 0, nullptr);
-        auto& ps = *info->GetProperties();
-        for(auto& p : ps)
-        {
-            if(strcmp(p.GetName(), propname) == 0)
-            {
-                prop = p;
-                prop.data = data;
-                return prop;
-            }
-        }
-        return prop;
-    }
-
-    Object SetVal(const char* propname,  void * v)
-    {
-        Object prop(nullptr, 0, nullptr);
-
-        auto& ps = *info->GetProperties();
-        for(auto& p : ps)
-        {
-            if(strcmp(p.GetName(), propname) == 0)
-            {
-                prop = p;
-                prop.data = data;
-                prop.SetVal(v);
-                return prop;
-            }
-        }
-        return prop;
-    }
-    Object operator[](int i)
-    {
-        Object p = (*info->GetProperties())[i];
-        p.data = data;
-        return p;
-    }
-};
-*/
 struct Meta
 {
     static std::map<std::string, TypeInfo*> typestable;
@@ -226,15 +207,6 @@ struct Meta
     static TypeInfo* GetInfo(T& a) { return ThisTypeInfo::get<T>(a); }
 };
 std::map<std::string, TypeInfo*> Meta::typestable;
-
-// template<>
-// Object Meta::CreateObject<const char*>(const char*& t)
-// {
-//     Object o;
-//     o.info = typestable[t];
-//     o.data = (uint8_t*) malloc(o.info->size);
-//     return o;
-// }
 
 #ifdef RFX
     #define STR_HELPER(x) #x
